@@ -33,7 +33,7 @@ cmd:text('Options')
 -- data
 cmd:option('-data_dir','/Users/bas/Downloads/MedleyDB_sample/','data directory. Should contain the file input.txt with input data')
 -- model params
-cmd:option('-rnn_size', 20, 'size of LSTM internal state')
+cmd:option('-rnn_size', 50, 'size of LSTM internal state')
 cmd:option('-num_layers', 5, 'number of layers in the LSTM')
 cmd:option('-model', 'lstm', 'for now only lstm is supported. keep fixed')
 -- optimization
