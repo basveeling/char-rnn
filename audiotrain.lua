@@ -31,7 +31,7 @@ cmd:text('Train a character-level language model')
 cmd:text()
 cmd:text('Options')
 -- data
-cmd:option('-data_dir','data/music','data directory. Should contain the file input.txt with input data')
+cmd:option('-data_dir','/Users/bas/Downloads/MedleyDB_sample/','data directory. Should contain the file input.txt with input data')
 -- model params
 cmd:option('-rnn_size', 20, 'size of LSTM internal state')
 cmd:option('-num_layers', 5, 'number of layers in the LSTM')

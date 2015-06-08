@@ -18,7 +18,7 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, split_f
     -- construct a tensor with all the data
     if not path.exists(data_file) then
         print('one-time setup: preprocessing audio file/annotations ' .. song_name .. '...')
-        SpectroMinibatchLoader.audio_to_tensor(song_name, data_file)
+        SpectroMinibatchLoader.audio_to_tensor(song_name, data_file, data_dir)
     end
 
     print('loading data files...')
@@ -94,12 +94,16 @@ function SpectroMinibatchLoader:next_batch(split_index)
 end
 
 -- *** STATIC method ***
-function SpectroMinibatchLoader.audio_to_tensor(song_name,data_file)
+function SpectroMinibatchLoader.audio_to_tensor(song_name,data_file, data_dir)
     local timer = torch.Timer()
 
     print('loading audio/annotations...')
-    song_audio = audio.load("/Users/bas/Downloads/MedleyDB_sample/Audio/"..song_name.."/"..song_name.."_MIX.wav")
-    melody = csvigo.load({path="/Users/bas/Downloads/MedleyDB_sample/Annotations/Melody_Annotations/MELODY2/"..song_name.."_MELODY2.csv",header=false})
+    audio_path =path.join(data_dir,"Audio/"..song_name.."/"..song_name.."_MIX.wav")
+    print(audio_path)
+    song_audio = audio.load(audio_path)
+    csv_path = tostring(path.join(data_dir,"Annotations/Melody_Annotations/MELODY2/"..song_name.."_MELODY2.csv"))
+    print(csv_path)
+    melody = csvigo.load({path=csv_path,header=false})
 
     print("Spectrogramify this song...")
     -- A stride of 256 corresponds with the annotation stride of MedleyDB, the windowsize determines the frequency precision and inversely the duration precisino
