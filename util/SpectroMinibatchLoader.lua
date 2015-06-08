@@ -12,7 +12,7 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, split_f
     local self = {}
     setmetatable(self, SpectroMinibatchLoader)
 
-    local song_name = "LizNelson_Rainfall"
+    local song_name = "Phoenix_ScotchMorris" --"LizNelson_Rainfall"
     local data_file = path.join(data_dir, song_name..'.t7')
 
     -- construct a tensor with all the data
@@ -99,15 +99,15 @@ function SpectroMinibatchLoader.audio_to_tensor(song_name,data_file)
 
     print('loading audio/annotations...')
     song_audio = audio.load("/Users/bas/Downloads/MedleyDB_sample/Audio/"..song_name.."/"..song_name.."_MIX.wav")
-    melody = csvigo.load("/Users/bas/Downloads/MedleyDB_sample/Annotations/Melody_Annotations/MELODY2/"..song_name.."_MELODY2.csv")
+    melody = csvigo.load({path="/Users/bas/Downloads/MedleyDB_sample/Annotations/Melody_Annotations/MELODY2/"..song_name.."_MELODY2.csv",header=false})
 
     print("Spectrogramify this song...")
     -- A stride of 256 corresponds with the annotation stride of MedleyDB, the windowsize determines the frequency precision and inversely the duration precisino
     spectro = audio.spectrogram(song_audio[{{1},{}}], 2^12, 'hann', 256)
     print("Done!")
 
-    times = torch.Tensor(melody.time)
-    frequencies = torch.Tensor(melody.freq)
+    times = torch.Tensor(melody.var_1)
+    frequencies = torch.Tensor(melody.var_2)
     voicing = frequencies:gt(0):double()
     unvoicing = torch.Tensor(voicing:size()):fill(1) - voicing
     one_hot_voicing = torch.cat(unvoicing,voicing, 2)

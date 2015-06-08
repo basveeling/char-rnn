@@ -33,26 +33,26 @@ cmd:text('Options')
 -- data
 cmd:option('-data_dir','data/music','data directory. Should contain the file input.txt with input data')
 -- model params
-cmd:option('-rnn_size', 100, 'size of LSTM internal state')
-cmd:option('-num_layers', 3, 'number of layers in the LSTM')
+cmd:option('-rnn_size', 20, 'size of LSTM internal state')
+cmd:option('-num_layers', 5, 'number of layers in the LSTM')
 cmd:option('-model', 'lstm', 'for now only lstm is supported. keep fixed')
 -- optimization
 cmd:option('-learning_rate',1e-3,'learning rate')
 cmd:option('-learning_rate_decay',0.97,'learning rate decay')
-cmd:option('-learning_rate_decay_after',10,'in number of epochs, when to start decaying the learning rate')
+cmd:option('-learning_rate_decay_after',20,'in number of epochs, when to start decaying the learning rate')
 cmd:option('-decay_rate',0.95,'decay rate for rmsprop')
-cmd:option('-dropout',0,'dropout to use just before classifier. 0 = no dropout')
+cmd:option('-dropout',0.3,'dropout to use just before classifier. 0 = no dropout')
 cmd:option('-seq_length',50,'number of timesteps to unroll for')
 cmd:option('-batch_size',50,'number of sequences to train on in parallel')
 cmd:option('-max_epochs',30,'number of full passes through the training data')
 cmd:option('-grad_clip',5,'clip gradients at')
-cmd:option('-train_frac',0.90,'fraction of data that goes into train set')
-cmd:option('-val_frac',0.10,'fraction of data that goes into validation set')
+cmd:option('-train_frac',0.85,'fraction of data that goes into train set')
+cmd:option('-val_frac',0.15,'fraction of data that goes into validation set')
             -- note: test_frac will be computed as (1 - train_frac - val_frac)
 -- bookkeeping
 cmd:option('-seed',1234,'torch manual random number generator seed')
 cmd:option('-print_every',1,'how many steps/minibatches between printing out the loss')
-cmd:option('-eval_val_every',1000,'every how many iterations should we evaluate on validation data?')
+cmd:option('-eval_val_every',100,'every how many iterations should we evaluate on validation data?')
 cmd:option('-checkpoint_dir', 'cv', 'output directory where checkpoints get written')
 cmd:option('-savefile','lstm','filename to autosave the checkpont to. Will be inside checkpoint_dir/')
 -- GPU/CPU
@@ -117,6 +117,9 @@ end
 -- evaluate the loss over an entire split
 function eval_split(split_index, max_batches)
     print('evaluating loss over split index ' .. split_index)
+
+    -- This matrix records the current confusion across classes
+    local confusion = optim.ConfusionMatrix(2)
     local n = loader.split_sizes[split_index]
     if max_batches ~= nil then n = math.min(max_batches, n) end
 
@@ -136,12 +139,18 @@ function eval_split(split_index, max_batches)
             clones.rnn[t]:evaluate() -- for dropout proper functioning
             local lst = clones.rnn[t]:forward{x[{{}, t}], unpack(rnn_state[t-1])}
             rnn_state[t] = {}
-            -- TODO: look at softmax layer
             for i=1,#init_state do table.insert(rnn_state[t], lst[i]) end
-            prediction = lst[#lst]
-            print(prediction:exp()[{{1,10},{}}])
-            print(y[{{}, t}][{{1,10}}])
+            local prediction = lst[#lst]
+
             loss = loss + clones.criterion[t]:forward(prediction, y[{{}, t}])
+
+            -- update confusion
+            local classProbabilities = torch.exp(prediction)
+            local _, classPredictions = torch.max(classProbabilities, 2)
+--            print(classPredictions[{{},1}], y[{{}, t}])
+            for k=1,opt.batch_size do
+                confusion:add(classPredictions[k][1], y[{{}, t}][k])
+            end
         end
         -- carry over lstm state
         rnn_state[0] = rnn_state[#rnn_state]
@@ -149,6 +158,9 @@ function eval_split(split_index, max_batches)
     end
 
     loss = loss / opt.seq_length / n
+
+    -- print confusion matrix
+    print(confusion)
     return loss
 end
 
