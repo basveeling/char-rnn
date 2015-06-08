@@ -19,7 +19,7 @@ function LSTM.lstm(input_size, rnn_size, n, dropout)
     local prev_c = inputs[L*2]
     -- the input to this layer
     if L == 1 then 
-      x = OneHot(input_size)(inputs[1])
+      x = inputs[1] -- NOTE: removed one hot here because spectro does not need it
       input_size_L = input_size
     else 
       x = outputs[(L-1)*2] 
@@ -54,7 +54,7 @@ function LSTM.lstm(input_size, rnn_size, n, dropout)
   -- set up the decoder
   local top_h = outputs[#outputs]
   if dropout > 0 then top_h = nn.Dropout(dropout)(top_h) end
-  local proj = nn.Linear(rnn_size, input_size)(top_h)
+  local proj = nn.Linear(rnn_size, 2)(top_h) -- TODO: add outputsize instead of 2 here!!
   local logsoft = nn.LogSoftMax()(proj)
   table.insert(outputs, logsoft)
 

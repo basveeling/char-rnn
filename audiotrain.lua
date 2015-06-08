@@ -33,15 +33,17 @@ cmd:text('Options')
 -- data
 cmd:option('-data_dir','data/music','data directory. Should contain the file input.txt with input data')
 -- model params
-cmd:option('-rnn_size', 50, 'size of LSTM internal state')
+cmd:option('-rnn_size', 100, 'size of LSTM internal state')
 cmd:option('-num_layers', 3, 'number of layers in the LSTM')
 cmd:option('-model', 'lstm', 'for now only lstm is supported. keep fixed')
 -- optimization
-cmd:option('-learning_rate',1e-4,'learning rate')
+cmd:option('-learning_rate',1e-3,'learning rate')
+cmd:option('-learning_rate_decay',0.97,'learning rate decay')
+cmd:option('-learning_rate_decay_after',10,'in number of epochs, when to start decaying the learning rate')
 cmd:option('-decay_rate',0.95,'decay rate for rmsprop')
 cmd:option('-dropout',0,'dropout to use just before classifier. 0 = no dropout')
 cmd:option('-seq_length',50,'number of timesteps to unroll for')
-cmd:option('-batch_size',100,'number of sequences to train on in parallel')
+cmd:option('-batch_size',50,'number of sequences to train on in parallel')
 cmd:option('-max_epochs',30,'number of full passes through the training data')
 cmd:option('-grad_clip',5,'clip gradients at')
 cmd:option('-train_frac',0.90,'fraction of data that goes into train set')
@@ -79,7 +81,6 @@ if not path.exists(opt.checkpoint_dir) then lfs.mkdir(opt.checkpoint_dir) end
 -- define the model: prototypes for one timestep, then clone them in time
 protos = {}
 print(input_dim)
-protos.embed = nn.Reshape(input_dim,true)
 print('creating an LSTM with ' .. opt.num_layers .. ' layers'..input_dim, opt.rnn_size, opt.dropout)
 protos.rnn = LSTM.lstm(input_dim, opt.rnn_size, opt.num_layers, opt.dropout)
 -- the initial state of the cell/hidden states
@@ -90,9 +91,6 @@ for L=1,opt.num_layers do
     table.insert(init_state, h_init:clone())
     table.insert(init_state, h_init:clone())
 end
-state_predict_index = #init_state -- index of blob to make prediction from
--- classifier on top
-protos.softmax = nn.Sequential():add(nn.Linear(opt.rnn_size, 2)):add(nn.LogSoftMax())
 -- training criterion (negative log likelihood)
 protos.criterion = nn.ClassNLLCriterion()
 
@@ -102,8 +100,11 @@ if opt.gpuid >= 0 then
 end
 
 -- put the above things into one flattened parameters tensor
-params, grad_params = model_utils.combine_all_parameters(protos.embed, protos.rnn, protos.softmax)
-params:uniform(-0.08, 0.08)
+params, grad_params = model_utils.combine_all_parameters(protos.rnn)
+
+-- initialization
+params:uniform(-0.08, 0.08) -- small numbers uniform
+
 print('number of parameters in the model: ' .. params:nElement())
 -- make a bunch of clones after flattening, as that reallocates memory
 clones = {}
@@ -122,7 +123,6 @@ function eval_split(split_index, max_batches)
     loader:reset_batch_pointer(split_index) -- move batch iteration pointer for this split to front
     local loss = 0
     local rnn_state = {[0] = init_state}
-    print(n)
     for i = 1,n do -- iterate over batches in the split
         -- fetch a batch
         local x, y = loader:next_batch(split_index)
@@ -133,12 +133,14 @@ function eval_split(split_index, max_batches)
         end
         -- forward pass
         for t=1,opt.seq_length do
-            print('size x',x:size())
-            local embedding = clones.embed[t]:forward(x[{{}, t}])
             clones.rnn[t]:evaluate() -- for dropout proper functioning
-            rnn_state[t] = clones.rnn[t]:forward{embedding, unpack(rnn_state[t-1])}
-            if type(rnn_state[t]) ~= 'table' then rnn_state[t] = {rnn_state[t]} end
-            local prediction = clones.softmax[t]:forward(rnn_state[t][state_predict_index])
+            local lst = clones.rnn[t]:forward{x[{{}, t}], unpack(rnn_state[t-1])}
+            rnn_state[t] = {}
+            -- TODO: look at softmax layer
+            for i=1,#init_state do table.insert(rnn_state[t], lst[i]) end
+            prediction = lst[#lst]
+            print(prediction:exp()[{{1,10},{}}])
+            print(y[{{}, t}][{{1,10}}])
             loss = loss + clones.criterion[t]:forward(prediction, y[{{}, t}])
         end
         -- carry over lstm state
@@ -166,47 +168,34 @@ function feval(x)
         y = y:float():cuda()
     end
     ------------------- forward pass -------------------
-    local embeddings = {}            -- input embeddings
     local rnn_state = {[0] = init_state_global}
     local predictions = {}           -- softmax outputs
     local loss = 0
     for t=1,opt.seq_length do
-        --print('size x',x[{{}, t}]:size())
-        embeddings[t] = clones.embed[t]:forward(x[{{}, t}])
         clones.rnn[t]:training() -- make sure we are in correct mode (this is cheap, sets flag)
-        rnn_state[t] = clones.rnn[t]:forward{embeddings[t], unpack(rnn_state[t-1])}
-        -- the following line is needed because nngraph tries to be clever
-        if type(rnn_state[t]) ~= 'table' then rnn_state[t] = {rnn_state[t]} end
-        predictions[t] = clones.softmax[t]:forward(rnn_state[t][state_predict_index])
-        -- print(predictions[t][50]:exp(),y[{{}, t}][50])
+        local lst = clones.rnn[t]:forward{x[{{}, t}], unpack(rnn_state[t-1])}
+        rnn_state[t] = {}
+        for i=1,#init_state do table.insert(rnn_state[t], lst[i]) end -- extract the state, without output
+        predictions[t] = lst[#lst] -- last element is the prediction
         loss = loss + clones.criterion[t]:forward(predictions[t], y[{{}, t}])
     end
     loss = loss / opt.seq_length
     ------------------ backward pass -------------------
-    local dembeddings = {}
     -- initialize gradient at time t to be zeros (there's no influence from future)
     local drnn_state = {[opt.seq_length] = clone_list(init_state, true)} -- true also zeros the clones
     for t=opt.seq_length,1,-1 do
         -- backprop through loss, and softmax/linear
         local doutput_t = clones.criterion[t]:backward(predictions[t], y[{{}, t}])
-        drnn_state[t][state_predict_index] = clones.softmax[t]:backward(rnn_state[t][state_predict_index], doutput_t)
-        -- backprop through LSTM timestep
-        local drnn_statet_passin = drnn_state[t]
-        -- we have to be careful with nngraph again
-        if #(rnn_state[t]) == 1 then drnn_statet_passin = drnn_state[t][1] end
-        local dlst = clones.rnn[t]:backward({embeddings[t], unpack(rnn_state[t-1])}, drnn_statet_passin)
+        table.insert(drnn_state[t], doutput_t)
+        local dlst = clones.rnn[t]:backward({x[{{}, t}], unpack(rnn_state[t-1])}, drnn_state[t])
         drnn_state[t-1] = {}
         for k,v in pairs(dlst) do
-            if k == 1 then 
-                dembeddings[t] = v
-            else
+            if k > 1 then -- k == 1 is gradient on x, which we dont need
                 -- note we do k-1 because first item is dembeddings, and then follow the 
                 -- derivatives of the state, starting at index 2. I know...
                 drnn_state[t-1][k-1] = v
             end
         end
-        -- backprop through embeddings
-        clones.embed[t]:backward(x[{{}, t}], dembeddings[t])
     end
     ------------------------ misc ----------------------
     -- transfer final state to initial state (BPTT)
@@ -222,9 +211,6 @@ val_losses = {}
 local optim_state = {learningRate = opt.learning_rate, alpha = opt.decay_rate}
 local iterations = opt.max_epochs * loader.ntrain
 local iterations_per_epoch = loader.ntrain
-print(iterations_per_epoch)
-print(iterations)
-print(loader.len)
 local loss0 = nil
 for i = 1, iterations do
     local epoch = i / loader.ntrain
@@ -235,6 +221,15 @@ for i = 1, iterations do
 
     local train_loss = loss[1] -- the loss is inside a list, pop it
     train_losses[i] = train_loss
+
+    -- exponential learning rate decay
+    if i % loader.ntrain == 0 and opt.learning_rate_decay < 1 then
+        if epoch >= opt.learning_rate_decay_after then
+            local decay_factor = opt.learning_rate_decay
+            optim_state.learningRate = optim_state.learningRate * decay_factor -- decay it
+            print('decayed learning rate by a factor ' .. decay_factor .. ' to ' .. optim_state.learningRate)
+        end
+    end
 
     -- every now and then or on last iteration
     if i % opt.eval_val_every == 0 or i == iterations then
@@ -266,7 +261,7 @@ for i = 1, iterations do
     if loss0 == nil then loss0 = loss[1] end
     if loss[1] > loss0 * 3 then
         print('loss is exploding, aborting.')
-        break -- halt 
+        break -- halt
     end
 end
 
