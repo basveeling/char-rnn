@@ -242,6 +242,8 @@ local optim_state = {learningRate = opt.learning_rate, alpha = opt.decay_rate}
 local iterations = opt.max_epochs * loader.ntrain
 local iterations_per_epoch = loader.ntrain
 local loss0 = nil
+collectgarbage()
+
 for i = 1, iterations do
     local epoch = i / loader.ntrain
 
@@ -285,7 +287,7 @@ for i = 1, iterations do
         print(string.format("%d/%d (epoch %.3f), train_loss = %6.8f, grad/param norm = %6.4e, time/batch = %.2fs", i, iterations, epoch, train_loss, grad_params:norm() / params:norm(), time))
     end
    
-    if i % 10 == 0 then collectgarbage() end
+    if i % 1 == 0 then collectgarbage() end -- TODO: fix memory issues
 
     -- handle early stopping if things are going really bad
     if loss0 == nil then loss0 = loss[1] end
