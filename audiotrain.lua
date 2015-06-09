@@ -34,14 +34,14 @@ cmd:text('Options')
 cmd:option('-data_dir','/Users/bas/Downloads/MedleyDB_sample/','data directory. Should contain the file input.txt with input data')
 -- model params
 cmd:option('-rnn_size', 100, 'size of LSTM internal state')
-cmd:option('-num_layers', 7, 'number of layers in the LSTM')
+cmd:option('-num_layers', 5, 'number of layers in the LSTM')
 cmd:option('-model', 'lstm', 'for now only lstm is supported. keep fixed')
 -- optimization
 cmd:option('-learning_rate',1e-3,'learning rate')
-cmd:option('-learning_rate_decay',0.90,'learning rate decay')
-cmd:option('-learning_rate_decay_after',5,'in number of epochs, when to start decaying the learning rate')
+cmd:option('-learning_rate_decay',0.97,'learning rate decay')
+cmd:option('-learning_rate_decay_after',10,'in number of epochs, when to start decaying the learning rate')
 cmd:option('-decay_rate',0.95,'decay rate for rmsprop')
-cmd:option('-dropout',0.3,'dropout to use just before classifier. 0 = no dropout')
+cmd:option('-dropout',0.1,'dropout to use just before classifier. 0 = no dropout')
 cmd:option('-seq_length',50,'number of timesteps to unroll for')
 cmd:option('-batch_size',50,'number of sequences to train on in parallel')
 cmd:option('-max_epochs',30,'number of full passes through the training data')
@@ -52,7 +52,7 @@ cmd:option('-val_frac',0.15,'fraction of data that goes into validation set')
 -- bookkeeping
 cmd:option('-seed',1234,'torch manual random number generator seed')
 cmd:option('-print_every',1,'how many steps/minibatches between printing out the loss')
-cmd:option('-eval_val_every',100,'every how many iterations should we evaluate on validation data?')
+cmd:option('-eval_val_every',200,'every how many iterations should we evaluate on validation data?')
 cmd:option('-checkpoint_dir', 'cv', 'output directory where checkpoints get written')
 cmd:option('-savefile','lstm','filename to autosave the checkpont to. Will be inside checkpoint_dir/')
 -- Audio options
@@ -112,6 +112,7 @@ print('number of parameters in the model: ' .. params:nElement())
 clones = {}
 for name,proto in pairs(protos) do
     print('cloning ' .. name)
+    collectgarbage()
     clones[name] = model_utils.clone_many_times(proto, opt.seq_length, not proto.parameters)
 end
 
@@ -167,6 +168,7 @@ end
 
 -- do fwd/bwd and return loss, grad_params
 local init_state_global = clone_list(init_state)
+reset_count = 1
 function feval(x)
     if x ~= params then
         params:copy(x)
@@ -183,7 +185,16 @@ function feval(x)
     ------------------- forward pass -------------------
     local rnn_state = {}
     if do_reset then
-        print("Resetting rnn state (new song)...")
+        print(string.format("Resetting rnn state (new song) (reset_count %d)",reset_count))
+        if reset_count > 1 then
+            -- Take iterative average over initial state of rnn.
+            for i,L_state in ipairs(init_state_global) do
+                init_state[i] = init_state[i] + (init_state_global[i] - init_state[i]) * (1/reset_count)
+            end
+        else
+            init_state = init_state_global
+        end
+        reset_count = reset_count + 1
         rnn_state = {[0] = clone_list(init_state) }
     else
         rnn_state = {[0] = init_state_global }

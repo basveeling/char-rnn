@@ -12,68 +12,60 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
     local self = {}
     setmetatable(self, SpectroMinibatchLoader)
 
-    local song_names = {"LizNelson_Rainfall","Phoenix_ScotchMorris","AimeeNorwich_Child","Debussy_LenfantProdigue","LizNelson_ImComingHome","MatthewEntwistle_TheArch","StrandOfOaks_Spacestation","LizNelson_Coldwar"}
-    -- {"AClassicEducation_NightOwl", "AimeeNorwich_Child", "AimeeNorwich_Flying",
-    -- -- "AlexanderRoss_GoodbyeBolero", "AlexanderRoss_VelvetCurtain", "AmarLal_Rest",
-    -- -- "AmarLal_SpringDay1", "Auctioneer_OurFutureFaces", "AvaLuna_Waterduct",
-    -- -- "BigTroubles_Phantom", "BrandonWebster_DontHearAThing", "BrandonWebster_YesSirICanFly",
-    -- -- "CelestialShore_DieForUs", "ChrisJacoby_BoothShotLincoln", "ChrisJacoby_PigsFoot",
-    -- -- "ClaraBerryAndWooldog_AirTraffic", "ClaraBerryAndWooldog_Boys", "ClaraBerryAndWooldog_Stella",
-    -- -- "ClaraBerryAndWooldog_TheBadGuys", "ClaraBerryAndWooldog_WaltzForMyVictims", "Creepoid_OldTree",
-    -- -- "CroqueMadame_Oil", "CroqueMadame_Pilot", "Debussy_LenfantProdigue", "DreamersOfTheGhetto_HeavyLove",
-    -- -- "EthanHein_1930sSynthAndUprightBass", "EthanHein_GirlOnABridge", "FacesOnFilm_WaitingForGa",
-    -- -- "FamilyBand_Again", "Handel_TornamiAVagheggiar", "HeladoNegro_MitadDelMundo", "HezekiahJones_BorrowedHeart",
-    -- -- "HopAlong_SisterCities", "InvisibleFamiliars_DisturbingWildlife", "JoelHelander_Definition",
-    -- -- "JoelHelander_ExcessiveResistancetoChange", "JoelHelander_IntheAtticBedroom", "KarimDouaidy_Hopscotch",
-    -- -- "KarimDouaidy_Yatora", "LizNelson_Coldwar", "LizNelson_ImComingHome", "LizNelson_Rainfall",
-    -- -- "MatthewEntwistle_DontYouEver", "MatthewEntwistle_FairerHopes", "MatthewEntwistle_ImpressionsOfSaturn",
-    -- -- "MatthewEntwistle_Lontano", "MatthewEntwistle_TheArch", "MatthewEntwistle_TheFlaxenField",
-    -- -- "Meaxic_TakeAStep", "Meaxic_YouListen", "MichaelKropf_AllGoodThings", "Mozart_BesterJungling",
-    -- -- "Mozart_DiesBildnis", "MusicDelta_80sRock", "MusicDelta_Beatles", "MusicDelta_BebopJazz",
-    -- -- "MusicDelta_Beethoven", "MusicDelta_Britpop", "MusicDelta_ChineseChaoZhou", "MusicDelta_ChineseDrama",
-    -- -- "MusicDelta_ChineseHenan", "MusicDelta_ChineseJiangNan", "MusicDelta_ChineseXinJing",
-    -- -- "MusicDelta_ChineseYaoZu", "MusicDelta_CoolJazz", "MusicDelta_Country1", "MusicDelta_Country2",
-    -- -- "MusicDelta_Disco", "MusicDelta_FreeJazz", "MusicDelta_FunkJazz", "MusicDelta_FusionJazz",
-    -- -- "MusicDelta_Gospel", "MusicDelta_GriegTrolltog", "MusicDelta_Grunge", "MusicDelta_Hendrix",
-    -- -- "MusicDelta_InTheHalloftheMountainKing", "MusicDelta_LatinJazz", "MusicDelta_ModalJazz",
-    -- -- "MusicDelta_Pachelbel", "MusicDelta_Punk", "MusicDelta_Reggae", "MusicDelta_Rock",
-    -- -- "MusicDelta_Rockabilly", "MusicDelta_Shadows", "MusicDelta_SpeedMetal", "MusicDelta_SwingJazz",
-    -- -- "MusicDelta_Vivaldi", "MusicDelta_Zeppelin", "NightPanther_Fire", "Phoenix_BrokenPledgeChicagoReel",
-    -- -- "Phoenix_ColliersDaughter", "Phoenix_ElzicsFarewell", "Phoenix_LarkOnTheStrandDrummondCastle",
-    -- -- "Phoenix_ScotchMorris", "Phoenix_SeanCaughlinsTheScartaglen", "PortStWillow_StayEven",
-    -- -- "PurlingHiss_Lolita", "Schubert_Erstarrung", "Schumann_Mignon", "SecretMountains_HighHorse",
-    -- -- "Snowmine_Curfews", "StevenClark_Bounty", "StrandOfOaks_Spacestation", "SweetLights_YouLetMeDown",
-    -- -- "TheDistricts_Vermont", "TheScarletBrand_LesFleursDuMal", "TheSoSoGlos_Emergency", "Wolf_DieBekherte"}
-    local data_file = path.join(data_dir, string.format('all2.t7'))
+    local song_names = {}
+    local singer_songwriter = {"ClaraBerryAndWooldog_Stella",
+    "MusicDelta_Country1",
+    "AClassicEducation_NightOwl",
+    "AlexanderRoss_GoodbyeBolero",
+    "ClaraBerryAndWooldog_WaltzForMyVictims",
+    "HezekiahJones_BorrowedHeart",
+    "FamilyBand_Again",
+    "ClaraBerryAndWooldog_TheBadGuys",
+    "LizNelson_Rainfall",
+    "MusicDelta_Beatles",
+    "AimeeNorwich_Child",
+    "ClaraBerryAndWooldog_Boys",
+    "FacesOnFilm_WaitingForGa",
+    "AlexanderRoss_VelvetCurtain",
+    "ClaraBerryAndWooldog_AirTraffic",
+    "LizNelson_Coldwar",
+    "PortStWillow_StayEven",
+    "InvisibleFamiliars_DisturbingWildlife",
+    "CelestialShore_DieForUs"}
+    song_names = singer_songwriter
     self.batch_size = batch_size
     self.seq_length = seq_length
 
-    -- construct a tensor with all the data
-    if not path.exists(data_file) then
-        print('one-time setup: preprocessing audio file/annotations', song_names)
-        SpectroMinibatchLoader.audio_to_tensor(song_names,data_file, data_dir, cutoff_low, cutoff_high)
-    end
 
-    print('loading data files...')
-    local all_data = torch.load(data_file)
-    local reset_rnn = {1}
-    for song_i,song_data in ipairs(all_data) do
+    local reset_rnn = {1 }
+    for song_i,song_name in ipairs(song_names) do
+        -- construct a tensor with all the data
+        song_path = SpectroMinibatchLoader.get_song_path(song_name,data_dir)
+        if not path.exists(song_path) then
+            print('one-time setup: preprocessing audio file/annotations for ', song_name)
+            SpectroMinibatchLoader.audio_to_tensor(song_name, data_dir, cutoff_low, cutoff_high)
+        end
+    end
+    for song_i,song_name in ipairs(song_names) do
+        -- construct a tensor with all the data
+        song_path = SpectroMinibatchLoader.get_song_path(song_name,data_dir)
+        print('Processing', song_name)
+        local song_data = torch.load(song_path)
         local spectro = song_data.spectro[{{},{cutoff_low,cutoff_high}}]:contiguous()
         local voicing = song_data.voicing
---        spectro = spectro[{{},{100,800-1}}]:contiguous() -- Crop spectrogram TODO: remove, already done
-        local mean = {}
-        local std = {}
+
         for i=1,spectro:size(2) do
            -- normalize each channel globally:
-           mean[i] = spectro[{ {},i}]:mean()
-           std[i] = spectro[{ {},i }]:std()
-           spectro[{ {},i }]:add(-mean[i])
-           spectro[{ {},i }]:div(std[i])
+           local mean_i = spectro[{ {},i}]:mean()
+           local std_i = spectro[{ {},i }]:std()
+           spectro[{ {},i }]:add(-mean_i)
+           spectro[{ {},i }]:div(std_i)
+           collectgarbage()
         end
+
         -- cut off the end so that it divides evenly
         local len = spectro:size(1)
         if len % (batch_size * seq_length) ~= 0 then
-            print('cutting off end of data so that the batches/sequences divide evenly')
             spectro = spectro:sub(1, batch_size * seq_length
                         * math.floor(len / (batch_size * seq_length)))
         end
@@ -94,11 +86,9 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
             for i,v in ipairs(song_x_batches) do self.x_batches[offset + i] = v end
             for i,v in ipairs(song_y_batches) do self.y_batches[offset + i] = v end
         end
-        -- TODO: NEXT UP: propogate changes for having multiple songs
+        song_data = nil
         collectgarbage()
     end
-
-    print(song_y_batches)
 
     self.reset_rnn = reset_rnn
     self.len = len
@@ -139,46 +129,45 @@ function SpectroMinibatchLoader:next_batch(split_index)
     local do_reset = self.reset_rnn[ix] == 1
     return self.x_batches[ix], self.y_batches[ix], do_reset
 end
-
+function SpectroMinibatchLoader.get_song_path(song_name,data_dir)
+    return path.join(data_dir,"torch",string.format("%s_data.t7",song_name))
+end
 -- *** STATIC method ***
-function SpectroMinibatchLoader.audio_to_tensor(song_names,data_file, data_dir)
+function SpectroMinibatchLoader.audio_to_tensor(song_name, data_dir)
     local timer = torch.Timer()
 
-    local data = {}
-    for index,song_name in ipairs(song_names) do
-        print('loading audio/annotations...')
-        local audio_path =path.join(data_dir,string.format("Audio/%s_MIX.wav",song_name))
-        print(audio_path)
-        local song_audio = audio.load(audio_path)
-        local csv_path = tostring(path.join(data_dir,string.format("Annotations/Melody_Annotations/MELODY2/%s_MELODY2.csv",song_name)))
-        print(csv_path)
-        local melody = csvigo.load({path=csv_path,header=false})
+    print('loading audio/annotations...')
+    local audio_path =path.join(data_dir,string.format("Audio/%s_MIX.wav",song_name))
+    print(audio_path)
+    local song_audio = audio.load(audio_path)
+    local csv_path = tostring(path.join(data_dir,string.format("Annotations/Melody_Annotations/MELODY2/%s_MELODY2.csv",song_name)))
+    print(csv_path)
+    local melody = csvigo.load({path=csv_path,header=false})
 
-        print("Spectrogramify this song...")
-        -- A stride of 256 corresponds with the annotation stride of MedleyDB, the windowsize determines the frequency precision and inversely the duration precisino
-        local spectro = audio.spectrogram(song_audio[{{1},{}}], 2^12, 'hann', 256)
-        print("Done!")
+    print("Spectrogramify this song...")
+    -- A stride of 256 corresponds with the annotation stride of MedleyDB, the windowsize determines the frequency precision and inversely the duration precisino
+    local spectro = audio.spectrogram(song_audio[{{1},{}}], 2^12, 'hann', 256)
+    print("Done!")
 
-        local times = torch.Tensor(melody.var_1)
-        local frequencies = torch.Tensor(melody.var_2)
-        local voicing = frequencies:gt(0):double()
-        local unvoicing = torch.Tensor(voicing:size()):fill(1) - voicing
-        local one_hot_voicing = torch.cat(unvoicing,voicing, 2)
-        local song_data = {}
-        song_data.spectro = spectro:t()
-        song_data.frequencies = frequencies
-        song_data.voicing = voicing
-        song_data.unvoicing = unvoicing
-        song_data.one_hot_voicing = one_hot_voicing
-        song_data.times = times
-        collectgarbage()
-        data[#data + 1] = song_data
-    end
+    local times = torch.Tensor(melody.var_1)
+    local frequencies = torch.Tensor(melody.var_2)
+    local voicing = frequencies:gt(0):double()
+    local unvoicing = torch.Tensor(voicing:size()):fill(1) - voicing
+    local one_hot_voicing = torch.cat(unvoicing,voicing, 2)
+    local song_data = {}
+    song_data.spectro = spectro:t()
+    song_data.frequencies = frequencies
+    song_data.voicing = voicing
+    song_data.unvoicing = unvoicing
+    song_data.one_hot_voicing = one_hot_voicing
+    song_data.times = times
     -- save output preprocessed files
-    print('saving ' .. data_file)
+    song_path = SpectroMinibatchLoader.get_song_path(song_name,data_dir)
+    print('saving ' .. song_path)
 
-    torch.save(data_file,data)
-    data = nil
+    torch.save(song_path,song_data)
+    song_data = nil
+    spectro = nil
     collectgarbage()
 end
 
