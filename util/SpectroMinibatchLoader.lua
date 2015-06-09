@@ -14,24 +14,24 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
 
     local song_names = {}
     local singer_songwriter = {"ClaraBerryAndWooldog_Stella",
-    "MusicDelta_Country1",
-    "AClassicEducation_NightOwl",
-    "AlexanderRoss_GoodbyeBolero",
-    "ClaraBerryAndWooldog_WaltzForMyVictims",
-    "HezekiahJones_BorrowedHeart",
-    "FamilyBand_Again",
-    "ClaraBerryAndWooldog_TheBadGuys",
-    "LizNelson_Rainfall",
-    "MusicDelta_Beatles",
-    "AimeeNorwich_Child",
-    "ClaraBerryAndWooldog_Boys",
-    "FacesOnFilm_WaitingForGa",
-    "AlexanderRoss_VelvetCurtain",
-    "ClaraBerryAndWooldog_AirTraffic",
-    "LizNelson_Coldwar",
-    "PortStWillow_StayEven",
-    "InvisibleFamiliars_DisturbingWildlife",
-    "CelestialShore_DieForUs"}
+        "MusicDelta_Country1",
+        "AClassicEducation_NightOwl",
+        "AlexanderRoss_GoodbyeBolero",
+        "ClaraBerryAndWooldog_WaltzForMyVictims",
+        "HezekiahJones_BorrowedHeart",
+        "FamilyBand_Again",
+        "ClaraBerryAndWooldog_TheBadGuys",
+        "LizNelson_Rainfall"}
+--        "MusicDelta_Beatles",
+--        "AimeeNorwich_Child",
+--        "ClaraBerryAndWooldog_Boys",
+--        "FacesOnFilm_WaitingForGa",
+--        "AlexanderRoss_VelvetCurtain",
+--        "ClaraBerryAndWooldog_AirTraffic",
+--        "LizNelson_Coldwar",
+--        "PortStWillow_StayEven",
+--        "InvisibleFamiliars_DisturbingWildlife",
+--        "CelestialShore_DieForUs"}
     song_names = singer_songwriter
     self.batch_size = batch_size
     self.seq_length = seq_length

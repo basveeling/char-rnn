@@ -163,6 +163,7 @@ function eval_split(split_index, max_batches)
 
     -- print confusion matrix
     print(confusion)
+    print("Average loss",loss)
     return loss
 end
 
@@ -232,6 +233,10 @@ function feval(x)
     init_state_global = rnn_state[#rnn_state] -- NOTE: I don't think this needs to be a clone, right?
     -- clip gradient element-wise
     grad_params:clamp(-opt.grad_clip, opt.grad_clip)
+
+    ----------------- graphhhh -------------------------
+
+--    graph.dot(clones.rnn[1].fg, 'Forward Graph','/tmp/fg')
     return loss, grad_params
 end
 
