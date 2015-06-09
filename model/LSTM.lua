@@ -46,22 +46,23 @@ function LSTM.lstm(input_size, rnn_size, n, dropout)
       })
     -- gated cells form the output
     local next_h = nn.CMulTable()({out_gate, nn.Tanh()(next_c)})
-    
+
     table.insert(outputs, next_c)
     table.insert(outputs, next_h)
   end
 
   -- set up the decoder
-  local top_h = outputs[#outputs]
-  if dropout > 0 then top_h = nn.Dropout(dropout)(top_h) end
-  local proj1 = nn.Linear(rnn_size, math.floor(rnn_size/2))(top_h)
-  local proj2 = nn.Sigmoid()(proj1)
-  if dropout > 0 then proj2 = nn.Dropout(dropout)(proj2) end
-  local proj3 = nn.Linear(math.floor(rnn_size/2), math.floor(rnn_size/4))(proj2)
-  local proj4 = nn.Sigmoid()(proj3)
-  if dropout > 0 then proj4 = nn.Dropout(dropout)(proj4) end
-  local proj5 = nn.Linear(math.floor(rnn_size/4),2)(proj4) -- TODO: add outputsize instead of 2 here!!
-  local logsoft = nn.LogSoftMax()(proj5)
+  local proj = outputs[#outputs]
+  if dropout > 0 then proj = nn.Dropout(dropout)(proj) end
+  -- TODO: make depth of classifier a variable
+--  local proj = nn.Linear(rnn_size, math.floor(rnn_size/2))(proj)
+--  local proj = nn.Sigmoid()(proj)
+--  if dropout > 0 then proj = nn.Dropout(dropout)(proj) end
+--  local proj = nn.Linear(math.floor(rnn_size/2), math.floor(rnn_size/4))(proj)
+--  local proj = nn.Sigmoid()(proj)
+  if dropout > 0 then proj = nn.Dropout(dropout)(proj) end
+  local proj = nn.Linear(math.floor(rnn_size),2)(proj) -- TODO: add outputsize instead of 2 here!!
+  local logsoft = nn.LogSoftMax()(proj)
   table.insert(outputs, logsoft)
 
   return nn.gModule(inputs, outputs)

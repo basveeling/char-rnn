@@ -21,38 +21,43 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
         "HezekiahJones_BorrowedHeart",
         "FamilyBand_Again",
         "ClaraBerryAndWooldog_TheBadGuys",
-        "LizNelson_Rainfall"}
---        "MusicDelta_Beatles",
---        "AimeeNorwich_Child",
---        "ClaraBerryAndWooldog_Boys",
---        "FacesOnFilm_WaitingForGa",
---        "AlexanderRoss_VelvetCurtain",
---        "ClaraBerryAndWooldog_AirTraffic",
---        "LizNelson_Coldwar",
---        "PortStWillow_StayEven",
---        "InvisibleFamiliars_DisturbingWildlife",
---        "CelestialShore_DieForUs"}
+        "LizNelson_Rainfall",
+        "MusicDelta_Beatles",
+        "AimeeNorwich_Child",
+        "ClaraBerryAndWooldog_Boys",
+        "FacesOnFilm_WaitingForGa",
+        "AlexanderRoss_VelvetCurtain",
+        "ClaraBerryAndWooldog_AirTraffic",
+        "LizNelson_Coldwar",
+        "PortStWillow_StayEven",
+        "InvisibleFamiliars_DisturbingWildlife",
+        "CelestialShore_DieForUs" }
     song_names = singer_songwriter
     self.batch_size = batch_size
     self.seq_length = seq_length
+    local song_start = 1
+    local song_stop = 1
 
 
     local reset_rnn = {1 }
-    for song_i,song_name in ipairs(song_names) do
+    for i=song_start,song_stop do
+        local song_name = song_names[i]
         -- construct a tensor with all the data
-        song_path = SpectroMinibatchLoader.get_song_path(song_name,data_dir)
+        local song_path = SpectroMinibatchLoader.get_song_path(song_name,data_dir)
         if not path.exists(song_path) then
             print('one-time setup: preprocessing audio file/annotations for ', song_name)
             SpectroMinibatchLoader.audio_to_tensor(song_name, data_dir, cutoff_low, cutoff_high)
         end
     end
-    for song_i,song_name in ipairs(song_names) do
+    for i=song_start,song_stop do
+        local song_name = song_names[i]
         -- construct a tensor with all the data
         song_path = SpectroMinibatchLoader.get_song_path(song_name,data_dir)
         print('Processing', song_name)
         local song_data = torch.load(song_path)
         local spectro = song_data.spectro[{{},{cutoff_low,cutoff_high}}]:contiguous()
         local voicing = song_data.voicing
+        local times = song_data.times
 
         for i=1,spectro:size(2) do
            -- normalize each channel globally:
@@ -71,28 +76,29 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
         end
         local len = spectro:size(1)
         local ydata = voicing[{{1,len}}]:add(1)
+        local timedata = times[{{1,len}}]
 
         self.input_dim = spectro:size(2)
         local song_x_batches = spectro:view(batch_size, -1,self.input_dim):split(seq_length, 2)  -- #rows = #batches
---        local song_nbatches = #self.x_batches
         local song_y_batches = ydata:view(batch_size, -1):split(seq_length, 2)  -- #rows = #batches
+        local song_time_batches = timedata:view(batch_size, -1):split(seq_length, 2)
         if self.x_batches == nil then
             self.x_batches = song_x_batches
             self.y_batches = song_y_batches
+            self.time_batches = song_time_batches
         else
             -- Concatenate batches
             local offset = #self.x_batches
             table.insert(reset_rnn,#self.x_batches+1,1)
             for i,v in ipairs(song_x_batches) do self.x_batches[offset + i] = v end
             for i,v in ipairs(song_y_batches) do self.y_batches[offset + i] = v end
+            for i,v in ipairs(song_time_batches) do self.time_batches[offset + i] = v end
         end
         song_data = nil
         collectgarbage()
     end
 
     self.reset_rnn = reset_rnn
-    self.len = len
-    -- self.batches is a table of tensors
     print('reshaping tensor...')
 
     self.nbatches = #self.x_batches
@@ -127,7 +133,8 @@ function SpectroMinibatchLoader:next_batch(split_index)
     if split_index == 2 then ix = ix + self.ntrain end -- offset by train set size
     if split_index == 3 then ix = ix + self.ntrain + self.nval end -- offset by train + test
     local do_reset = self.reset_rnn[ix] == 1
-    return self.x_batches[ix], self.y_batches[ix], do_reset
+    -- Now also returning time
+    return self.x_batches[ix], self.y_batches[ix], self.time_batches[ix]
 end
 function SpectroMinibatchLoader.get_song_path(song_name,data_dir)
     return path.join(data_dir,"torch",string.format("%s_data.t7",song_name))
