@@ -12,7 +12,7 @@ https://github.com/wojciechz/learning_to_execute
 which is turn based on other stuff in Torch, etc... (long lineage)
 
 ]]--
-require('mobdebug')--.start()
+--require('mobdebug').start()
 require 'torch'
 require 'nn'
 require 'nngraph'
@@ -34,14 +34,14 @@ cmd:text('Options')
 cmd:option('-data_dir','/Users/bas/Downloads/MedleyDB_sample/','data directory. Should contain the file input.txt with input data')
 -- model params
 cmd:option('-rnn_size', 50, 'size of LSTM internal state')
-cmd:option('-num_layers', 5, 'number of layers in the LSTM')
+cmd:option('-num_layers', 7, 'number of layers in the LSTM')
 cmd:option('-model', 'lstm', 'for now only lstm is supported. keep fixed')
 -- optimization
-cmd:option('-learning_rate',1e-3,'learning rate')
+cmd:option('-learning_rate',2e-3,'learning rate')
 cmd:option('-learning_rate_decay',0.97,'learning rate decay')
-cmd:option('-learning_rate_decay_after',20,'in number of epochs, when to start decaying the learning rate')
+cmd:option('-learning_rate_decay_after',10,'in number of epochs, when to start decaying the learning rate')
 cmd:option('-decay_rate',0.95,'decay rate for rmsprop')
-cmd:option('-dropout',0.3,'dropout to use just before classifier. 0 = no dropout')
+cmd:option('-dropout',0.5,'dropout to use just before classifier. 0 = no dropout')
 cmd:option('-seq_length',50,'number of timesteps to unroll for')
 cmd:option('-batch_size',50,'number of sequences to train on in parallel')
 cmd:option('-max_epochs',30,'number of full passes through the training data')
@@ -55,6 +55,9 @@ cmd:option('-print_every',1,'how many steps/minibatches between printing out the
 cmd:option('-eval_val_every',100,'every how many iterations should we evaluate on validation data?')
 cmd:option('-checkpoint_dir', 'cv', 'output directory where checkpoints get written')
 cmd:option('-savefile','lstm','filename to autosave the checkpont to. Will be inside checkpoint_dir/')
+-- Audio options
+cmd:option('-cutoff_low',100,'lower cutoff the spectrogram')
+cmd:option('-cutoff_high',600,'upper cutoff the spectrogram')
 -- GPU/CPU
 cmd:option('-gpuid',-1,'which gpu to use. -1 = use CPU')
 cmd:text()
@@ -73,14 +76,13 @@ if opt.gpuid >= 0 then
     cutorch.setDevice(opt.gpuid + 1) -- note +1 to make it 0 indexed! sigh lua
 end
 -- -- create the data loader class
-local loader = SpectroMinibatchLoader.create(opt.data_dir, opt.batch_size, opt.seq_length, split_sizes)
+local loader = SpectroMinibatchLoader.create(opt.data_dir, opt.batch_size, opt.seq_length, opt.cutoff_low, opt.cutoff_high, split_sizes)
 local input_dim = loader.input_dim
 -- make sure output directory exists
 if not path.exists(opt.checkpoint_dir) then lfs.mkdir(opt.checkpoint_dir) end
 
 -- define the model: prototypes for one timestep, then clone them in time
 protos = {}
-print(input_dim)
 print('creating an LSTM with ' .. opt.num_layers .. ' layers'..input_dim, opt.rnn_size, opt.dropout)
 protos.rnn = LSTM.lstm(input_dim, opt.rnn_size, opt.num_layers, opt.dropout)
 -- the initial state of the cell/hidden states
@@ -111,7 +113,6 @@ clones = {}
 for name,proto in pairs(protos) do
     print('cloning ' .. name)
     clones[name] = model_utils.clone_many_times(proto, opt.seq_length, not proto.parameters)
-    print('done')
 end
 
 -- evaluate the loss over an entire split
@@ -173,14 +174,20 @@ function feval(x)
     grad_params:zero()
 
     ------------------ get minibatch -------------------
-    local x, y = loader:next_batch(1)
+    local x, y, do_reset = loader:next_batch(1)
     if opt.gpuid >= 0 then -- ship the input arrays to GPU
         -- have to convert to float because integers can't be cuda()'d
         x = x:float():cuda()
         y = y:float():cuda()
     end
     ------------------- forward pass -------------------
-    local rnn_state = {[0] = init_state_global}
+    local rnn_state = {}
+    if do_reset then
+        print("Resetting rnn state (new song)...")
+        rnn_state = {[0] = clone_list(init_state) }
+    else
+        rnn_state = {[0] = init_state_global }
+    end
     local predictions = {}           -- softmax outputs
     local loss = 0
     for t=1,opt.seq_length do
