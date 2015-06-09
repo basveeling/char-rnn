@@ -1,6 +1,6 @@
 
 # melody-rnn
-This is an adaption of [karpathy/char-rnn](karpathy/char-rnn) for melody onset/offset detection. 
+This is an adaption of [karpathy/char-rnn](/karpathy/char-rnn) for melody onset/offset detection. 
 
 ## Method
 - A spectrogram is generated of each song, a subset of the melodic range is selected
