@@ -214,9 +214,11 @@ function feval(x)
         -- for debugging: Save activations of final layer neurons per timestep
         for b=0,opt.batch_size-1 do
             local activations_off = (t+b*opt.seq_length) + (loader.batch_ix[1]-1)*opt.batch_size*opt.seq_length
---            print(activations_off)
             for n=1,opt.rnn_size do
-                activations[n][activations_off] = {time_batch[{b+1, t}],clones.rnn[t].outnode.data.mapindex[opt.num_layers*2 - 1].module.output[{b+1,{n}}][1] }
+                activations[n][activations_off] = {time_batch[{b+1, t}],
+                    clones.rnn[t].outnode.data.mapindex[opt.num_layers*2 - 1].module.output[{b+1,{n}}][1],
+                    loader.batch_song[loader.batch_ix[1]]
+                }
             end
         end
 

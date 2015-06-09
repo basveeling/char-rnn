@@ -35,6 +35,7 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
     song_names = singer_songwriter
     self.batch_size = batch_size
     self.seq_length = seq_length
+    self.batch_song = {}
     local song_start = 1
     local song_stop = 1
 
@@ -86,6 +87,7 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
             self.x_batches = song_x_batches
             self.y_batches = song_y_batches
             self.time_batches = song_time_batches
+            for b=1,#self.x_batches do self.batch_song[b] = song_name end
         else
             -- Concatenate batches
             local offset = #self.x_batches
@@ -93,6 +95,7 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
             for i,v in ipairs(song_x_batches) do self.x_batches[offset + i] = v end
             for i,v in ipairs(song_y_batches) do self.y_batches[offset + i] = v end
             for i,v in ipairs(song_time_batches) do self.time_batches[offset + i] = v end
+            for b=offset,#self.x_batches do self.batch_song[b] = song_name end
         end
         song_data = nil
         collectgarbage()
