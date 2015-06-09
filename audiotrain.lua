@@ -46,19 +46,19 @@ cmd:option('-seq_length',40,'number of timesteps to unroll for')
 cmd:option('-batch_size',30,'number of sequences to train on in parallel')
 cmd:option('-max_epochs',30,'number of full passes through the training data')
 cmd:option('-grad_clip',5,'clip gradients at')
-cmd:option('-train_frac',.5,'fraction of data that goes into train set')
-cmd:option('-val_frac',.5,'fraction of data that goes into validation set')
+cmd:option('-train_frac',.9,'fraction of data that goes into train set')
+cmd:option('-val_frac',.1,'fraction of data that goes into validation set')
             -- note: test_frac will be computed as (1 - train_frac - val_frac)
 -- bookkeeping
 cmd:option('-seed',1234,'torch manual random number generator seed')
 cmd:option('-print_every',5,'how many steps/minibatches between printing out the loss')
-cmd:option('-eval_val_every',20,'every how many iterations should we evaluate on validation data?')
+cmd:option('-eval_val_every',200,'every how many iterations should we evaluate on validation data?')
 cmd:option('-checkpoint_dir', 'cv', 'output directory where checkpoints get written')
 cmd:option('-savefile','lstm','filename to autosave the checkpont to. Will be inside checkpoint_dir/')
 -- Audio options
 cmd:option('-cutoff_low',20,'lower cutoff the spectrogram')
 cmd:option('-cutoff_high',599,'upper cu toff the spectrogram')
-cmd:option('-save_activations_layer',10,'1:2*num_layers+1,  0 for disabled. save csv files of final layer neuron activations for use in sonic visualiser. even numbers are gated, uneven are ungated.')
+cmd:option('-save_activations_layer',0,'1:2*num_layers+1,  0 for disabled. save csv files of final layer neuron activations for use in sonic visualiser. even numbers are gated, uneven are ungated.')
 -- GPU/CPU
 cmd:option('-gpuid',-1,'which gpu to use. -1 = use CPU')
 cmd:text()
@@ -332,7 +332,7 @@ for i = 1, iterations do
                   return a[1] < b[1]
                 end
                 table.sort(activations[n],compare_activation)
-
+                -- save to csv in /tmp
                 csvigo.save({verbose=false,path=string.format("/tmp/activations_L%d_neuron-%d_iteration-%d.csv",opt.save_activations_layer,n,i),data=activations[n],headers=false})
             end
         end

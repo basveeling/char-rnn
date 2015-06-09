@@ -36,8 +36,8 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
     self.batch_size = batch_size
     self.seq_length = seq_length
     self.batch_song = {}
-    local song_start = 1
-    local song_stop = 1
+    local song_start = 4
+    local song_stop = 10
 
 
     local reset_rnn = {1 }
