@@ -33,15 +33,15 @@ cmd:text('Options')
 -- data
 cmd:option('-data_dir','/Users/bas/Downloads/MedleyDB_sample/','data directory. Should contain the file input.txt with input data')
 -- model params
-cmd:option('-rnn_size', 50, 'size of LSTM internal state')
+cmd:option('-rnn_size', 100, 'size of LSTM internal state')
 cmd:option('-num_layers', 7, 'number of layers in the LSTM')
 cmd:option('-model', 'lstm', 'for now only lstm is supported. keep fixed')
 -- optimization
-cmd:option('-learning_rate',2e-3,'learning rate')
-cmd:option('-learning_rate_decay',0.97,'learning rate decay')
-cmd:option('-learning_rate_decay_after',10,'in number of epochs, when to start decaying the learning rate')
+cmd:option('-learning_rate',1e-3,'learning rate')
+cmd:option('-learning_rate_decay',0.90,'learning rate decay')
+cmd:option('-learning_rate_decay_after',5,'in number of epochs, when to start decaying the learning rate')
 cmd:option('-decay_rate',0.95,'decay rate for rmsprop')
-cmd:option('-dropout',0.5,'dropout to use just before classifier. 0 = no dropout')
+cmd:option('-dropout',0.3,'dropout to use just before classifier. 0 = no dropout')
 cmd:option('-seq_length',50,'number of timesteps to unroll for')
 cmd:option('-batch_size',50,'number of sequences to train on in parallel')
 cmd:option('-max_epochs',30,'number of full passes through the training data')
@@ -56,8 +56,8 @@ cmd:option('-eval_val_every',100,'every how many iterations should we evaluate o
 cmd:option('-checkpoint_dir', 'cv', 'output directory where checkpoints get written')
 cmd:option('-savefile','lstm','filename to autosave the checkpont to. Will be inside checkpoint_dir/')
 -- Audio options
-cmd:option('-cutoff_low',100,'lower cutoff the spectrogram')
-cmd:option('-cutoff_high',600,'upper cutoff the spectrogram')
+cmd:option('-cutoff_low',20,'lower cutoff the spectrogram')
+cmd:option('-cutoff_high',599,'upper cutoff the spectrogram')
 -- GPU/CPU
 cmd:option('-gpuid',-1,'which gpu to use. -1 = use CPU')
 cmd:text()

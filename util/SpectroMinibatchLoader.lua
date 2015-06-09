@@ -12,8 +12,39 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
     local self = {}
     setmetatable(self, SpectroMinibatchLoader)
 
-    local song_names = {"LizNelson_Rainfall","Phoenix_ScotchMorris"}
-    local data_file = path.join(data_dir, string.format('all.t7'))
+    local song_names = {"LizNelson_Rainfall","Phoenix_ScotchMorris","AimeeNorwich_Child","Debussy_LenfantProdigue","LizNelson_ImComingHome","MatthewEntwistle_TheArch","StrandOfOaks_Spacestation","LizNelson_Coldwar"}
+    -- {"AClassicEducation_NightOwl", "AimeeNorwich_Child", "AimeeNorwich_Flying",
+    -- -- "AlexanderRoss_GoodbyeBolero", "AlexanderRoss_VelvetCurtain", "AmarLal_Rest",
+    -- -- "AmarLal_SpringDay1", "Auctioneer_OurFutureFaces", "AvaLuna_Waterduct",
+    -- -- "BigTroubles_Phantom", "BrandonWebster_DontHearAThing", "BrandonWebster_YesSirICanFly",
+    -- -- "CelestialShore_DieForUs", "ChrisJacoby_BoothShotLincoln", "ChrisJacoby_PigsFoot",
+    -- -- "ClaraBerryAndWooldog_AirTraffic", "ClaraBerryAndWooldog_Boys", "ClaraBerryAndWooldog_Stella",
+    -- -- "ClaraBerryAndWooldog_TheBadGuys", "ClaraBerryAndWooldog_WaltzForMyVictims", "Creepoid_OldTree",
+    -- -- "CroqueMadame_Oil", "CroqueMadame_Pilot", "Debussy_LenfantProdigue", "DreamersOfTheGhetto_HeavyLove",
+    -- -- "EthanHein_1930sSynthAndUprightBass", "EthanHein_GirlOnABridge", "FacesOnFilm_WaitingForGa",
+    -- -- "FamilyBand_Again", "Handel_TornamiAVagheggiar", "HeladoNegro_MitadDelMundo", "HezekiahJones_BorrowedHeart",
+    -- -- "HopAlong_SisterCities", "InvisibleFamiliars_DisturbingWildlife", "JoelHelander_Definition",
+    -- -- "JoelHelander_ExcessiveResistancetoChange", "JoelHelander_IntheAtticBedroom", "KarimDouaidy_Hopscotch",
+    -- -- "KarimDouaidy_Yatora", "LizNelson_Coldwar", "LizNelson_ImComingHome", "LizNelson_Rainfall",
+    -- -- "MatthewEntwistle_DontYouEver", "MatthewEntwistle_FairerHopes", "MatthewEntwistle_ImpressionsOfSaturn",
+    -- -- "MatthewEntwistle_Lontano", "MatthewEntwistle_TheArch", "MatthewEntwistle_TheFlaxenField",
+    -- -- "Meaxic_TakeAStep", "Meaxic_YouListen", "MichaelKropf_AllGoodThings", "Mozart_BesterJungling",
+    -- -- "Mozart_DiesBildnis", "MusicDelta_80sRock", "MusicDelta_Beatles", "MusicDelta_BebopJazz",
+    -- -- "MusicDelta_Beethoven", "MusicDelta_Britpop", "MusicDelta_ChineseChaoZhou", "MusicDelta_ChineseDrama",
+    -- -- "MusicDelta_ChineseHenan", "MusicDelta_ChineseJiangNan", "MusicDelta_ChineseXinJing",
+    -- -- "MusicDelta_ChineseYaoZu", "MusicDelta_CoolJazz", "MusicDelta_Country1", "MusicDelta_Country2",
+    -- -- "MusicDelta_Disco", "MusicDelta_FreeJazz", "MusicDelta_FunkJazz", "MusicDelta_FusionJazz",
+    -- -- "MusicDelta_Gospel", "MusicDelta_GriegTrolltog", "MusicDelta_Grunge", "MusicDelta_Hendrix",
+    -- -- "MusicDelta_InTheHalloftheMountainKing", "MusicDelta_LatinJazz", "MusicDelta_ModalJazz",
+    -- -- "MusicDelta_Pachelbel", "MusicDelta_Punk", "MusicDelta_Reggae", "MusicDelta_Rock",
+    -- -- "MusicDelta_Rockabilly", "MusicDelta_Shadows", "MusicDelta_SpeedMetal", "MusicDelta_SwingJazz",
+    -- -- "MusicDelta_Vivaldi", "MusicDelta_Zeppelin", "NightPanther_Fire", "Phoenix_BrokenPledgeChicagoReel",
+    -- -- "Phoenix_ColliersDaughter", "Phoenix_ElzicsFarewell", "Phoenix_LarkOnTheStrandDrummondCastle",
+    -- -- "Phoenix_ScotchMorris", "Phoenix_SeanCaughlinsTheScartaglen", "PortStWillow_StayEven",
+    -- -- "PurlingHiss_Lolita", "Schubert_Erstarrung", "Schumann_Mignon", "SecretMountains_HighHorse",
+    -- -- "Snowmine_Curfews", "StevenClark_Bounty", "StrandOfOaks_Spacestation", "SweetLights_YouLetMeDown",
+    -- -- "TheDistricts_Vermont", "TheScarletBrand_LesFleursDuMal", "TheSoSoGlos_Emergency", "Wolf_DieBekherte"}
+    local data_file = path.join(data_dir, string.format('all2.t7'))
     self.batch_size = batch_size
     self.seq_length = seq_length
 
@@ -80,7 +111,8 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
     self.ntrain = math.floor(self.nbatches * split_fractions[1])
     self.nval = math.floor(self.nbatches * split_fractions[2])
     self.ntest = self.nbatches - self.nval - self.ntrain -- the rest goes to test (to ensure this adds up exactly)
-
+    self.nval = self.nval + self.ntest
+    self.ntest = 0
     self.split_sizes = {self.ntrain, self.nval, self.ntest}
     self.batch_ix = {0,0,0}
 
@@ -93,7 +125,7 @@ function SpectroMinibatchLoader:reset_batch_pointer(split_index, batch_index)
     batch_index = batch_index or 0
     self.batch_ix[split_index] = batch_index
 end
- 
+
 function SpectroMinibatchLoader:next_batch(split_index)
     -- split_index is integer: 1 = train, 2 = val, 3 = test
     self.batch_ix[split_index] = self.batch_ix[split_index] + 1
@@ -115,7 +147,7 @@ function SpectroMinibatchLoader.audio_to_tensor(song_names,data_file, data_dir)
     local data = {}
     for index,song_name in ipairs(song_names) do
         print('loading audio/annotations...')
-        local audio_path =path.join(data_dir,string.format("Audio/%s/%s_MIX.wav",song_name,song_name))
+        local audio_path =path.join(data_dir,string.format("Audio/%s_MIX.wav",song_name))
         print(audio_path)
         local song_audio = audio.load(audio_path)
         local csv_path = tostring(path.join(data_dir,string.format("Annotations/Melody_Annotations/MELODY2/%s_MELODY2.csv",song_name)))
