@@ -114,7 +114,7 @@ function SpectroMinibatchLoader.create(data_dir, batch_size, seq_length, cutoff_
     self.ntest = 0
     self.split_sizes = {self.ntrain, self.nval, self.ntest}
     self.batch_ix = {0,0,0}
-
+    print(self.batch_song)
     print(string.format('data load done. Number of batches in train: %d, val: %d, test: %d', self.ntrain, self.nval, self.ntest))
     collectgarbage()
     return self
